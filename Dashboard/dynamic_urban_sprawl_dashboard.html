@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban Sprawl Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+  :root {
+    --cream:   #f5f0e8;
+    --paper:   #faf8f3;
+    --white:   #ffffff;
+    --ink:     #1c1a17;
+    --ink2:    #3d3a34;
+    --muted:   #8a8278;
+    --line:    #ddd8ce;
+    --line2:   #ebe6da;
+
+    /* city palette — earthy */
+    --paris:        #2b6cb0;
+    --bangkok:      #c05621;
+    --atlanta:      #276749;
+    --mexico:       #6b46c1;
+
+    --paris-light:   #ebf4ff;
+    --bangkok-light: #fff5eb;
+    --atlanta-light: #f0fff4;
+    --mexico-light:  #faf5ff;
+
+    --sidebar-w: 220px;
+    --header-h:  60px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── CONNECT MODAL ─────────────────────── */
+  #connect-modal {
+    position: fixed; inset: 0;
+    background: rgba(245,240,232,0.97);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .connect-box {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 40px;
+    max-width: 520px;
+    width: 90%;
+    box-shadow: 0 4px 24px rgba(28,26,23,0.08);
+  }
+
+  .connect-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .connect-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    line-height: 1.75;
+  }
+
+  .connect-sub strong { color: var(--ink2); }
+  .connect-sub code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--cream);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--paris);
+  }
+
+  .connect-input {
+    width: 100%;
+    background: var(--cream);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 11px 14px;
+    border-radius: 6px;
+    outline: none;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+  }
+
+  .connect-input:focus { border-color: var(--ink2); }
+
+  .connect-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--ink);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .connect-btn:hover { background: var(--ink2); }
+
+  .connect-error {
+    color: #c53030;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 8px;
+    display: none;
+    line-height: 1.5;
+  }
+
+  .connect-steps {
+    margin-top: 22px;
+    background: var(--cream);
+    border-radius: 6px;
+    padding: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  .connect-steps strong { color: var(--ink2); }
+  .connect-steps code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--line2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--paris);
+  }
+
+  /* ── HEADER ─────────────────────────────── */
+  header {
+    height: var(--header-h);
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    position: sticky; top: 0; z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .header-title {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+
+  .header-sep { color: var(--line); font-size: 20px; }
+
+  .header-sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 3px 9px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--atlanta);
+    border: 1px solid rgba(39,103,73,0.3);
+    padding: 3px 9px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--atlanta);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .header-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    background: none;
+    transition: all 0.15s;
+  }
+
+  .header-btn:hover { border-color: var(--ink2); color: var(--ink); }
+
+  /* ── BODY LAYOUT ────────────────────────── */
+  .body-wrap {
+    display: flex;
+    flex: 1;
+  }
+
+  /* ── SIDEBAR ────────────────────────────── */
+  aside {
+    width: var(--sidebar-w);
+    background: var(--white);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    flex-shrink: 0;
+    position: sticky;
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--line2);
+    margin-bottom: 20px;
+  }
+
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* NAV ITEMS */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    background: none;
+    color: var(--ink2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+    margin-bottom: 2px;
+  }
+
+  .nav-item:hover { background: var(--cream); }
+  .nav-item.active { background: var(--cream); color: var(--ink); font-weight: 500; }
+  .nav-item .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+  .nav-item.active .nav-dot { background: var(--ink); }
+
+  /* CITY TOGGLES */
+  .city-toggle {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 3px;
+  }
+
+  .city-toggle:hover { background: var(--cream); }
+  .city-toggle input { display: none; }
+
+  .city-swatch {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+  }
+
+  .city-toggle.off .city-swatch { opacity: 0.25; }
+  .city-toggle.off .city-name { color: var(--muted); }
+
+  .city-name {
+    font-size: 13px;
+    color: var(--ink2);
+    transition: color 0.2s;
+  }
+
+  /* YEAR CHIPS */
+  .year-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .year-chip {
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    background: none;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .year-chip:hover { border-color: var(--ink2); color: var(--ink2); }
+  .year-chip.active { border-color: var(--ink); background: var(--ink); color: var(--white); }
+
+  .chip-row { display: flex; gap: 6px; margin-bottom: 8px; }
+
+  .mini-btn {
+    font-size: 11px;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    background: none;
+    border-radius: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mini-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── MAIN ───────────────────────────────── */
+  main {
+    flex: 1;
+    padding: 32px;
+    max-width: 1200px;
+    overflow-x: hidden;
+  }
+
+  /* ── PAGE HEADING ────────────────────────── */
+  .page-heading { margin-bottom: 28px; }
+
+  .page-heading h1 {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .page-heading p { font-size: 13px; color: var(--muted); }
+
+  /* ── ALERT NOTE ──────────────────────────── */
+  .note-box {
+    background: #fffbeb;
+    border-left: 3px solid #d97706;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 28px;
+    font-size: 12.5px;
+    color: #92400e;
+    line-height: 1.7;
+  }
+
+  .note-box.info {
+    background: #ebf4ff;
+    border-left-color: var(--paris);
+    color: #2c5282;
+  }
+
+  /* ── KPI STRIP ───────────────────────────── */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .kpi-value {
+    font-family: 'Lora', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .kpi-unit { font-size: 13px; color: var(--muted); margin-left: 3px; }
+
+  .kpi-sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  /* ── PANELS ──────────────────────────────── */
+  .panel-grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 20px; }
+  .panel-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+  .panel-grid-eq { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+  .panel-full { margin-bottom: 20px; }
+
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line2);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .panel-title {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .panel-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .panel-body { padding: 20px; }
+  .panel-body-flush { padding: 0; overflow-x: auto; }
+
+  .chart-box { position: relative; height: 260px; }
+  .chart-box-sm { position: relative; height: 210px; }
+
+  /* ── DATA TABLE ──────────────────────────── */
+  .dt {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  .dt th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .dt td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line2);
+    color: var(--ink2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .dt td:first-child { font-family: 'DM Sans', sans-serif; }
+  .dt tr:last-child td { border-bottom: none; }
+  .dt tr:hover td { background: var(--cream); }
+
+  .city-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── PILLS ───────────────────────────────── */
+  .pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .pill.densification { background: #f0fff4; color: var(--atlanta); }
+  .pill.balanced      { background: #fffbeb; color: #92400e; }
+  .pill.sprawl        { background: #fff5f5; color: #c53030; }
+
+  /* ── MAP ─────────────────────────────────── */
+  #map { height: 400px; border-radius: 0 0 8px 8px; }
+
+  /* ── ACCURACY BARS ───────────────────────── */
+  .metric-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .metric-name {
+    font-size: 11px;
+    color: var(--muted);
+    width: 76px;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .metric-bar-wrap {
+    flex: 1;
+    height: 7px;
+    background: var(--line2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .metric-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .metric-val {
+    font-size: 11px;
+    color: var(--ink);
+    width: 42px;
+    text-align: right;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── FINDINGS ────────────────────────────── */
+  .finding {
+    border-left: 2px solid var(--line);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .finding:hover { border-left-color: var(--ink); }
+
+  .finding-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .finding-title {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+
+  .finding-body {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ── TAB PANELS ──────────────────────────── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── INLINE SELECT ───────────────────────── */
+  .inline-select {
+    background: var(--white);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .inline-select:focus { border-color: var(--ink); }
+
+  /* ── MAP ZOOM BUTTONS ────────────────────── */
+  .map-zoom-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .zoom-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--ink2);
+    font-size: 12.5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .zoom-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── SECTION TITLE ───────────────────────── */
+  .section-title {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line2);
+  }
+
+  /* ── REC BLOCK ───────────────────────────── */
+  .rec-group { margin-bottom: 14px; }
+  .rec-group-title { font-weight: 500; font-size: 13px; margin-bottom: 6px; color: var(--ink); }
+  .rec-item { font-size: 12.5px; color: var(--muted); line-height: 1.8; padding-left: 14px; position: relative; }
+  .rec-item::before { content: '–'; position: absolute; left: 0; color: var(--line); }
+
+  /* ── RESPONSIVE ──────────────────────────── */
+  @media (max-width: 900px) {
+    .panel-grid-2, .panel-grid-3, .panel-grid-eq { grid-template-columns: 1fr; }
+    aside { display: none; }
+    main { padding: 20px 16px; }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--cream); }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══ CONNECT MODAL ════════════════════════════════════════════════════ -->
+<div id="connect-modal">
+  <div class="connect-box">
+    <div class="connect-title">Connect to Your Colab Notebook</div>
+    <div class="connect-sub">
+      This dashboard reads <strong>live data directly from your running notebook</strong>.
+      Every chart and table updates automatically when you re-run your analysis cells.
+      Paste the ngrok URL printed by <code>dashboard_backend.py</code> below.
+    </div>
+    <input class="connect-input" id="url-input" type="text" placeholder="https://abc123.ngrok-free.app">
+    <button class="connect-btn" onclick="connectToBackend()">Connect &amp; Load Dashboard</button>
+    <div class="connect-error" id="connect-error"></div>
+    <div class="connect-steps">
+      <strong>How to get the URL:</strong><br>
+      1. Run all analysis cells in your Colab notebook (Phases 1 → 7)<br>
+      2. Copy the URL it prints (looks like <code>https://xxxx.ngrok-free.app</code>) and paste it above
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ═══════════════════════════════════════════════════════════ -->
+<header>
+  <span class="header-title">Urban Sprawl Study</span>
+  <span class="header-sep">·</span>
+  <span class="header-sub">Team 4 · Group G7 · Remote Sensing</span>
+  <div class="header-right">
+    <div class="live-badge" id="live-badge"><span class="live-dot"></span>LIVE · COLAB</div>
+    <button class="header-btn" onclick="loadAllData()">↻ Refresh</button>
+    <button class="header-btn" onclick="showConnectModal()">⟳ Reconnect</button>
+    <span class="header-tag">LANDSAT 5/7/8/9 · 2000–2025</span>
+  </div>
+</header>
+
+<div class="body-wrap">
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
+<aside>
+
+  <!-- Navigation -->
+  <div class="sidebar-section">
+    <div class="sidebar-label">Sections</div>
+    <button class="nav-item active" onclick="switchTab('overview')">
+      <span class="nav-dot"></span> Overview
+    </button>
+    <button class="nav-item" onclick="switchTab('timeseries')">
+      <span class="nav-dot"></span> Time Series
+    </button>
+    <button class="nav-item" onclick="switchTab('accuracy')">
+      <span class="nav-dot"></span> Accuracy Metrics
+    </button>
+    <button class="nav-item" onclick="switchTab('sdg')">
+      <span class="nav-dot"></span> SDG 11.3.1
+    </button>
+    <button class="nav-item" onclick="switchTab('morphology')">
+      <span class="nav-dot"></span> Morphology
+    </button>
+    <button class="nav-item" onclick="switchTab('map')">
+      <span class="nav-dot"></span> Satellite Map
+    </button>
+    <button class="nav-item" onclick="switchTab('findings')">
+      <span class="nav-dot"></span> Key Findings
+    </button>
+  </div>
+
+  <!-- Cities -->
+  <div class="sidebar-section">
+    <div class="sidebar-label">Cities</div>
+    <div class="chip-row">
+      <button class="mini-btn" onclick="selectAllCities()">All</button>
+      <button class="mini-btn" onclick="clearAllCities()">None</button>
+    </div>
+    <div id="city-toggles">
+      <span style="font-size:12px;color:var(--muted)">Loading…</span>
+    </div>
+  </div>
+
+  <!-- Years -->
+  <div class="sidebar-section" style="border-bottom:none;margin-bottom:0;">
+    <div class="sidebar-label">Years</div>
+    <div class="chip-row">
+      <button class="mini-btn" onclick="selectAllYears()">All</button>
+      <button class="mini-btn" onclick="clearAllYears()">None</button>
+    </div>
+    <div class="year-chips" id="year-chips">
+      <span style="font-size:12px;color:var(--muted)">Loading…</span>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ══ MAIN CONTENT ══════════════════════════════════════════════════════ -->
+<main>
+
+  <!-- ── OVERVIEW ───────────────────────────── -->
+  <div class="tab-panel active" id="tab-overview">
+
+    <div class="page-heading">
+      <h1>Urban Expansion 2000–2025</h1>
+      <p>Four global cities tracked via satellite imagery — anomaly-corrected data</p>
+    </div>
+
+    <div id="anomaly-banner"></div>
+
+    <div class="kpi-strip" id="kpi-row"></div>
+
+    <div class="panel-grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Urban Area Over Time</span>
+          <span class="panel-hint">km² · anomaly-corrected</span>
+        </div>
+        <div class="panel-body">
+          <div class="chart-box"><canvas id="chart-area"></canvas></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">City Summary</span>
+          <span class="panel-hint">2000–2025</span>
+        </div>
+        <div class="panel-body-flush">
+          <table class="dt" id="summary-table">
+            <thead><tr><th>City</th><th>Start km²</th><th>End km²</th><th>Δ %</th><th>Slope</th><th>R²</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-grid-3">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">CAGR per Period (%/yr)</span><span class="panel-hint">growth_df</span></div>
+        <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-cagr"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Trend R²</span><span class="panel-hint">trend_records</span></div>
+        <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-r2"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Trend Slope (km²/yr)</span><span class="panel-hint">trend_records</span></div>
+        <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-slope-ov"></canvas></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── TIME SERIES ─────────────────────────── -->
+  <div class="tab-panel" id="tab-timeseries">
+
+    <div class="page-heading">
+      <h1>Time Series Analysis</h1>
+      <p>Use the sidebar to filter cities and years</p>
+    </div>
+
+    <div class="panel-grid-eq">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Urban Area — Filtered View</span>
+          <span class="panel-hint">km² · clean</span>
+        </div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-ts-area"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Raw vs. Clean (Anomaly Impact)</span>
+          <span class="panel-hint" style="margin-left:0">
+            <select class="inline-select" id="rawclean-city" onchange="renderRawClean()"></select>
+          </span>
+        </div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-rawclean"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="panel panel-full">
+      <div class="panel-head">
+        <span class="panel-title">City × Year Urban Area Table</span>
+        <span class="panel-hint">km² · anomaly-corrected</span>
+      </div>
+      <div class="panel-body-flush">
+        <table class="dt" id="ts-table">
+          <thead><tr></tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel-grid-eq">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Total Growth Rate per Period (%)</span><span class="panel-hint">growth_df</span></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-ts-growth"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Annual Rate (CAGR) per Period</span><span class="panel-hint">growth_df</span></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-ts-cagr"></canvas></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ACCURACY ────────────────────────────── -->
+  <div class="tab-panel" id="tab-accuracy">
+
+    <div class="page-heading">
+      <h1>Accuracy Metrics</h1>
+      <p>Classification performance across cities and years</p>
+    </div>
+
+    <div id="acc-nodata" style="display:none" class="note-box info">
+      No <code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:#dbeafe;padding:1px 4px;border-radius:3px;">accuracy_records</code> variable found in the notebook yet.
+      Create a list named <code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:#dbeafe;padding:1px 4px;border-radius:3px;">accuracy_records</code> with dicts containing keys:
+      <code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:#dbeafe;padding:1px 4px;border-radius:3px;">city, year, OA, P, R, F1, K</code> — then click Refresh.
+    </div>
+
+    <div id="acc-content">
+      <div class="panel-grid-eq">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Overall Accuracy (OA %) over Time</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-oa"></canvas></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Urban F1-Score</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-f1"></canvas></div></div>
+        </div>
+      </div>
+      <div class="panel-grid-eq">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">All Metrics per City</span>
+            <span class="panel-hint" style="margin-left:0">
+              <select class="inline-select" id="acc-year-select" onchange="renderAccBars()"></select>
+            </span>
+          </div>
+          <div class="panel-body"><div id="acc-bars"></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Average Kappa per City</span></div>
+          <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-kappa"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── SDG ────────────────────────────────── -->
+  <div class="tab-panel" id="tab-sdg">
+
+    <div class="page-heading">
+      <h1>SDG 11.3.1 — Land Consumption</h1>
+      <p>Land Consumption Rate relative to population growth</p>
+    </div>
+
+    <div class="kpi-strip" id="sdg-kpi-row"></div>
+
+    <div class="panel-grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Land Consumption Rate (LCR)</span><span class="panel-hint">lcr_df</span></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-lcr"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">LCR Verdict Table</span></div>
+        <div class="panel-body-flush">
+          <table class="dt" id="sdg-table">
+            <thead><tr><th>City</th><th>Period</th><th>LCR</th><th>CAGR Land</th><th>CAGR Pop</th><th>Verdict</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── MORPHOLOGY ─────────────────────────── -->
+  <div class="tab-panel" id="tab-morphology">
+
+    <div class="page-heading">
+      <h1>Urban Morphology</h1>
+      <p>Landscape shape metrics from compactness analysis</p>
+    </div>
+
+    <div id="morph-nodata" style="display:none" class="note-box info">
+      <code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:#dbeafe;padding:1px 4px;border-radius:3px;">compactness_df</code> is empty.
+      Run the <code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:#dbeafe;padding:1px 4px;border-radius:3px;">pylandstats</code> cell in §7.8 of your notebook, then click Refresh.
+    </div>
+
+    <div class="panel-grid-3">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">LSI — Shape Complexity</span><span class="panel-hint">lower = compact</span></div>
+        <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-lsi"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">LPI — Dominant Patch %</span><span class="panel-hint">higher = connected</span></div>
+        <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-lpi"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Patch Density</span><span class="panel-hint">lower = less fragmented</span></div>
+        <div class="panel-body"><div class="chart-box-sm"><canvas id="chart-pd"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="panel panel-full">
+      <div class="panel-head"><span class="panel-title">Compactness Full Table</span><span class="panel-hint">compactness_df</span></div>
+      <div class="panel-body-flush">
+        <table class="dt" id="morph-table">
+          <thead><tr><th>City</th><th>Year</th><th>LSI</th><th>LPI %</th><th>Patch Density</th><th>Anomaly?</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── MAP ────────────────────────────────── -->
+  <div class="tab-panel" id="tab-map">
+
+    <div class="page-heading">
+      <h1>Satellite Map</h1>
+      <p>Study cities — Landsat coverage areas</p>
+    </div>
+
+    <div class="map-zoom-row">
+      <span style="font-size:12px;color:var(--muted);align-self:center;">Zoom to:</span>
+      <button class="zoom-btn" onclick="mapZoom('Paris')">Paris</button>
+      <button class="zoom-btn" onclick="mapZoom('Bangkok')">Bangkok</button>
+      <button class="zoom-btn" onclick="mapZoom('Atlanta')">Atlanta</button>
+      <button class="zoom-btn" onclick="mapZoom('Mexico_City')">Mexico City</button>
+      <button class="zoom-btn" onclick="mapZoom('all')">World View</button>
+    </div>
+
+    <div class="panel panel-full">
+      <div class="panel-head"><span class="panel-title">Study Cities</span><span class="panel-hint">OpenStreetMap base</span></div>
+      <div id="map"></div>
+    </div>
+
+  </div>
+
+  <!-- ── FINDINGS ───────────────────────────── -->
+  <div class="tab-panel" id="tab-findings">
+
+    <div class="page-heading">
+      <h1>Key Findings</h1>
+      <p>Scientific conclusions and recommendations</p>
+    </div>
+
+    <div class="panel-grid-eq" style="align-items:start">
+      <div>
+        <div class="section-title">Five Key Scientific Findings</div>
+
+        <div class="finding">
+          <div class="finding-num">Finding 01</div>
+          <div class="finding-title">Urban expansion confirmed across all four cities (2000–2025)</div>
+          <div class="finding-body">All study cities show positive urban growth over the 25-year period. Bangkok and Mexico City record the strongest absolute area increases. Paris shows the smallest relative change, consistent with its mature structure and PLU/Grand Paris planning.</div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-num">Finding 02</div>
+          <div class="finding-title">2015 Landsat anomaly was a pipeline artefact, not genuine contraction</div>
+          <div class="finding-body">Atlanta's 2015 V-shaped dip was traced to winter compositing allowing Dilated Cloud (QA Bit 1) halos into the composite. Two-layer fix — Phase 2 seasonal compositing + Phase 7 anomaly interpolation — fully corrects all reported metrics.</div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-num">Finding 03</div>
+          <div class="finding-title">Classification accuracy is climate-zone dependent</div>
+          <div class="finding-body">Paris achieves the highest Urban F1-scores (0.72–0.82) benefiting from strong spectral contrast. Bangkok and Atlanta show lower F1 (0.45–0.72) due to tropical canopy confusion and low-density suburban spectral signatures.</div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-num">Finding 04</div>
+          <div class="finding-title">Land consumption outpaces population growth in most city-periods (LCR &gt; 1)</div>
+          <div class="finding-body">Atlanta shows the most persistent sprawl (LCR &gt; 1.5 in most periods). Paris shows the most balanced recent performance (LCR approaching 1.0 post-2015), consistent with Grand Paris infill incentives.</div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-num">Finding 05</div>
+          <div class="finding-title">Urban morphology diverges systematically across climate zones</div>
+          <div class="finding-body">Bangkok and Mexico City develop more compactly (lower LSI, higher LPI) than Atlanta (high LSI, high PD), reflecting the difference between state-guided dense-corridor development and market-driven dispersed sprawl.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Recommendations &amp; Contributions</div>
+
+        <div class="panel" style="margin-bottom:16px;">
+          <div class="panel-body">
+            <div class="rec-group">
+              <div class="rec-group-title">Data &amp; Model</div>
+              <div class="rec-item">Add multi-city training data to improve generalisation</div>
+              <div class="rec-item">Use Sentinel-1 SAR and texture features for better urban detection</div>
+              <div class="rec-item">Use Sentinel-2 (10 m) for finer urban boundary delineation</div>
+            </div>
+            <div class="rec-group">
+              <div class="rec-group-title">Validation &amp; Extension</div>
+              <div class="rec-item">Validate with OSM building footprints and GHSL cross-checks</div>
+              <div class="rec-item">Extend to district-level and predictive growth modelling</div>
+              <div class="rec-item">Link to SDG dashboard for operational planning use</div>
+            </div>
+            <div class="rec-group" style="margin-bottom:0">
+              <div class="rec-group-title">Dissemination</div>
+              <div class="rec-item">Publish pipeline code and data for reproducibility</div>
+              <div class="rec-item">Maintain this live dashboard for stakeholder communication</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Three Scientific Contributions</span></div>
+          <div class="panel-body">
+            <div style="font-size:13px;color:var(--muted);line-height:1.9;">
+              <strong style="color:var(--ink)">01 ·</strong> Fully reproducible sensor-agnostic pipeline spanning Landsat 5/7/8/9 without manual reconfiguration<br><br>
+              <strong style="color:var(--ink)">02 ·</strong> Documented two-layer fix for 2015 Landsat cloud anomaly — reusable QA framework for any temperate Landsat time-series<br><br>
+              <strong style="color:var(--ink)">03 ·</strong> Integrated 8-metric urban expansion assessment connecting pixel-level accuracy (Phase 5) to SDG 11.3.1 monitoring (Phase 7)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+</div><!-- /body-wrap -->
+
+<!-- ══ JAVASCRIPT ════════════════════════════════════════════════════════ -->
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════════
+const CITY_COLORS = {
+  Paris:'#2b6cb0', Bangkok:'#c05621', Atlanta:'#276749', Mexico_City:'#6b46c1'
+};
+const CITY_LABELS = {
+  Paris:'Paris', Bangkok:'Bangkok', Atlanta:'Atlanta', Mexico_City:'Mexico City'
+};
+const CITY_COORDS = {
+  Paris:[48.8566,2.3522,10], Bangkok:[13.7563,100.5018,10],
+  Atlanta:[33.7490,-84.3880,10], Mexico_City:[19.4326,-99.1332,10]
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+let BACKEND_URL = '';
+let DATA        = null;
+let activeCities = new Set();
+let activeYears  = new Set();
+const charts = {};
+
+// ═══════════════════════════════════════════════════════════════════════
+// CONNECT MODAL
+// ═══════════════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('sprawl_backend_url');
+  if (saved) document.getElementById('url-input').value = saved;
+});
+
+async function connectToBackend() {
+  const raw = document.getElementById('url-input').value.trim().replace(/\/+$/, '');
+  const errEl = document.getElementById('connect-error');
+  errEl.style.display = 'none';
+
+  if (!raw) {
+    errEl.textContent = 'Please enter a URL.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.textContent = 'Connecting…';
+  errEl.style.display = 'block';
+  errEl.style.color = 'var(--muted)';
+
+  try {
+    const res = await fetch(`${raw}/api/status`, { mode: 'cors' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error('Backend returned unexpected status.');
+
+    BACKEND_URL = raw;
+    localStorage.setItem('sprawl_backend_url', raw);
+    document.getElementById('connect-modal').style.display = 'none';
+    await loadAllData();
+  } catch (e) {
+    errEl.style.color = '#c53030';
+    errEl.textContent = `Could not connect: ${e.message}. Make sure the Colab cell is still running and the URL is correct.`;
+  }
+}
+
+function showConnectModal() {
+  document.getElementById('connect-modal').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════════════════════════
+async function loadAllData() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/summary`, { mode: 'cors' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    DATA = await res.json();
+    buildControls();
+    refreshAll();
+  } catch (e) {
+    alert('Failed to load data from backend: ' + e.message +
+          '\n\nMake sure the Colab cell is still running. Click "Reconnect" to try again.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// BUILD FILTER CONTROLS (dynamic from live data)
+// ═══════════════════════════════════════════════════════════════════════
+function buildControls() {
+  const cities = DATA.cities || [];
+  const epochs = DATA.epochs || [];
+  activeCities = new Set(cities);
+  activeYears  = new Set(epochs);
+
+  // City toggles in sidebar
+  document.getElementById('city-toggles').innerHTML = cities.map(c => `
+    <label class="city-toggle" id="toggle-${c}" onclick="toggleCity('${c}')">
+      <span class="city-swatch" style="background:${CITY_COLORS[c]||'#888'}"></span>
+      <span class="city-name">${CITY_LABELS[c]||c}</span>
+    </label>`).join('');
+
+  // Year chips in sidebar
+  document.getElementById('year-chips').innerHTML = epochs.map(y =>
+    `<button class="year-chip active" data-year="${y}" onclick="toggleYear(${y},this)">${y}</button>`
+  ).join('');
+
+  // Accuracy year select
+  document.getElementById('acc-year-select').innerHTML =
+    epochs.map(y => `<option value="${y}">${y}</option>`).join('');
+
+  // Raw/clean city select
+  document.getElementById('rawclean-city').innerHTML =
+    cities.map(c => `<option value="${c}">${CITY_LABELS[c]||c}</option>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FILTER HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+function vis(c)  { return activeCities.has(c); }
+function visY(y) { return activeYears.has(y);  }
+
+function toggleCity(c) {
+  activeCities.has(c) ? activeCities.delete(c) : activeCities.add(c);
+  const el = document.getElementById(`toggle-${c}`);
+  if (el) el.classList.toggle('off', !activeCities.has(c));
+  refreshAll();
+}
+
+function toggleYear(y, btn) {
+  activeYears.has(y) ? activeYears.delete(y) : activeYears.add(y);
+  if (btn) btn.classList.toggle('active', activeYears.has(y));
+  refreshAll();
+}
+
+function selectAllCities() {
+  (DATA?.cities || []).forEach(c => {
+    activeCities.add(c);
+    const el = document.getElementById(`toggle-${c}`);
+    if (el) el.classList.remove('off');
+  });
+  refreshAll();
+}
+
+function clearAllCities() {
+  (DATA?.cities || []).forEach(c => {
+    activeCities.delete(c);
+    const el = document.getElementById(`toggle-${c}`);
+    if (el) el.classList.add('off');
+  });
+  refreshAll();
+}
+
+function selectAllYears() {
+  (DATA?.epochs || []).forEach(y => {
+    activeYears.add(y);
+    document.querySelector(`.year-chip[data-year="${y}"]`)?.classList.add('active');
+  });
+  refreshAll();
+}
+
+function clearAllYears() {
+  (DATA?.epochs || []).forEach(y => {
+    activeYears.delete(y);
+    document.querySelector(`.year-chip[data-year="${y}"]`)?.classList.remove('active');
+  });
+  refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════════
+let mapInitialized = false;
+const TAB_NAMES = ['overview','timeseries','accuracy','sdg','morphology','map','findings'];
+
+function switchTab(name) {
+  document.querySelectorAll('.nav-item').forEach((t, i) =>
+    t.classList.toggle('active', TAB_NAMES[i] === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'map' && !mapInitialized && DATA) { initMap(); mapInitialized = true; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHART UTILITIES
+// ═══════════════════════════════════════════════════════════════════════
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+const BASE = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color:'#8a8278', font:{ family:'DM Sans', size:11 }, boxWidth:10, padding:14 } },
+    tooltip: { mode:'index', intersect:false }
+  },
+  scales: {
+    x: { ticks:{ color:'#8a8278', font:{ family:'JetBrains Mono', size:10 } }, grid:{ color:'rgba(221,216,206,0.5)' } },
+    y: { ticks:{ color:'#8a8278', font:{ family:'JetBrains Mono', size:10 } }, grid:{ color:'rgba(221,216,206,0.5)' } }
+  }
+};
+
+function mkLine(datasets, labels) {
+  return { type:'line', data:{ labels, datasets }, options: { ...BASE, elements:{ line:{ tension:0.3 }, point:{ radius:4, hoverRadius:6, backgroundColor:'#fff', borderWidth:2 } } } };
+}
+function mkBar(datasets, labels) {
+  return { type:'bar', data:{ labels, datasets }, options: { ...BASE } };
+}
+
+function lineDs(c, data, extra={}) {
+  return { label: CITY_LABELS[c]||c, data,
+    borderColor: CITY_COLORS[c], backgroundColor: CITY_COLORS[c]+'18',
+    fill:true, borderWidth:2, pointBackgroundColor:'#fff', pointBorderColor:CITY_COLORS[c], pointBorderWidth:2,
+    spanGaps:true, ...extra };
+}
+function barDs(c, data, extra={}) {
+  return { label: CITY_LABELS[c]||c, data,
+    backgroundColor: CITY_COLORS[c]+'88', borderColor: CITY_COLORS[c], borderWidth:1, ...extra };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── OVERVIEW ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+function renderKPIs() {
+  if (!DATA) return;
+  const anomaly_flags = DATA.anomaly_flags || {};
+  const totalAnomalies = Object.values(anomaly_flags).reduce((s,v) => s + v.length, 0);
+
+  document.getElementById('kpi-row').innerHTML = [
+    { label:'Cities Analysed',       val: activeCities.size,             unit:'',   sub:'Active filter'              },
+    { label:'Study Epochs',          val: (DATA.epochs||[]).length,      unit:'',   sub:(DATA.epochs||[]).join(' · ') },
+    { label:'Anomalous Years Fixed', val: totalAnomalies,                unit:'',   sub:'Phase 7 interpolation'      },
+    { label:'Landsat Sensors',       val: '4',                           unit:'',   sub:'L5 · L7 · L8 · L9'          },
+    { label:'Pipeline Resolution',   val: '30',                          unit:'m',  sub:'All rasters'                },
+  ].map(d => `<div class="kpi-card">
+    <div class="kpi-label">${d.label}</div>
+    <div class="kpi-value">${d.val}<span class="kpi-unit">${d.unit}</span></div>
+    <div class="kpi-sub">${d.sub}</div>
+  </div>`).join('');
+
+  // Anomaly banner
+  const flags = Object.entries(anomaly_flags).filter(([,v]) => v.length > 0);
+  document.getElementById('anomaly-banner').innerHTML = flags.length
+    ? `<div class="note-box" style="margin-bottom:28px">
+        <strong>Anomaly-corrected years (Phase 7):</strong>
+        ${flags.map(([c,yrs]) => `<strong>${c}</strong>: [${yrs.join(', ')}]`).join(' · ')} —
+        values interpolated from nearest clean neighbours in <code style="font-family:'JetBrains Mono',monospace;font-size:11px;">areas_df_clean</code>.
+      </div>` : '';
+}
+
+function renderAreaChart() {
+  if (!DATA) return;
+  destroyChart('chart-area');
+  const area = DATA.urban_area?.clean || {};
+  const filtY = (DATA.epochs||[]).filter(visY);
+  const ds = (DATA.cities||[]).filter(vis).map(c =>
+    lineDs(c, filtY.map(y => area[c]?.[y] ?? null)));
+  charts['chart-area'] = new Chart(
+    document.getElementById('chart-area').getContext('2d'), mkLine(ds, filtY));
+}
+
+function renderSummaryTable() {
+  if (!DATA) return;
+  const area  = DATA.urban_area?.clean || {};
+  const trend = DATA.trend || {};
+  document.querySelector('#summary-table tbody').innerHTML =
+    (DATA.cities||[]).filter(vis).map(c => {
+      const epochs = Object.keys(area[c]||{}).map(Number).sort((a,b)=>a-b);
+      if (!epochs.length) return '';
+      const start = area[c][epochs[0]];
+      const end   = area[c][epochs[epochs.length-1]];
+      const delta = start ? ((end - start) / start * 100).toFixed(1) : '—';
+      const col   = parseFloat(delta) >= 0 ? 'var(--atlanta)' : '#c53030';
+      const slope = trend[c]?.slope?.toFixed(2) ?? '—';
+      const r2    = trend[c]?.r_squared?.toFixed(3) ?? '—';
+      return `<tr>
+        <td><span class="city-dot" style="background:${CITY_COLORS[c]}"></span>${CITY_LABELS[c]||c}</td>
+        <td>${start?.toFixed(1) ?? '—'}</td>
+        <td>${end?.toFixed(1)   ?? '—'}</td>
+        <td style="color:${col}">${delta}%</td>
+        <td style="color:${parseFloat(slope)>=0?'var(--atlanta)':'#c53030'}">${slope}</td>
+        <td>${r2}</td>
+      </tr>`;
+    }).join('');
+}
+
+function renderCagrChart() {
+  if (!DATA) return;
+  destroyChart('chart-cagr');
+  const growth = DATA.growth || [];
+  const periods = [...new Set(growth.map(r => `${r.from_year}–${r.to_year}`))];
+  const ds = (DATA.cities||[]).filter(vis).map(c =>
+    barDs(c, periods.map(p => {
+      const [y1,y2] = p.split('–').map(Number);
+      return growth.find(r => r.city===c && r.from_year===y1 && r.to_year===y2)?.annual_rate_pct ?? null;
+    })));
+  charts['chart-cagr'] = new Chart(
+    document.getElementById('chart-cagr').getContext('2d'), mkBar(ds, periods));
+}
+
+function renderR2Chart() {
+  if (!DATA) return;
+  destroyChart('chart-r2');
+  const trend = DATA.trend || {};
+  const vis_c = (DATA.cities||[]).filter(vis);
+  charts['chart-r2'] = new Chart(
+    document.getElementById('chart-r2').getContext('2d'), {
+      type:'bar',
+      data:{ labels: vis_c.map(c=>CITY_LABELS[c]||c),
+             datasets:[{ label:'R²', data: vis_c.map(c=>trend[c]?.r_squared??null),
+               backgroundColor: vis_c.map(c=>CITY_COLORS[c]+'88'),
+               borderColor:     vis_c.map(c=>CITY_COLORS[c]), borderWidth:1 }] },
+      options:{ ...BASE, scales:{ ...BASE.scales, y:{ ...BASE.scales.y, min:0, max:1 } } }
+    });
+}
+
+function renderSlopeOvChart() {
+  if (!DATA) return;
+  destroyChart('chart-slope-ov');
+  const trend = DATA.trend || {};
+  const vis_c = (DATA.cities||[]).filter(vis);
+  charts['chart-slope-ov'] = new Chart(
+    document.getElementById('chart-slope-ov').getContext('2d'), {
+      type:'bar',
+      data:{ labels: vis_c.map(c=>CITY_LABELS[c]||c),
+             datasets:[{ label:'Slope km²/yr', data: vis_c.map(c=>trend[c]?.slope??null),
+               backgroundColor: vis_c.map(c=>(trend[c]?.slope??0)>=0?CITY_COLORS[c]+'88':'#c5303088'),
+               borderColor:     vis_c.map(c=>(trend[c]?.slope??0)>=0?CITY_COLORS[c]:'#c53030'), borderWidth:1 }] },
+      options: BASE
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── TIME SERIES ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+function renderTsCharts() {
+  if (!DATA) return;
+  const area   = DATA.urban_area?.clean || {};
+  const growth = DATA.growth || [];
+  const filtY  = (DATA.epochs||[]).filter(visY);
+  const vis_c  = (DATA.cities||[]).filter(vis);
+
+  destroyChart('chart-ts-area');
+  charts['chart-ts-area'] = new Chart(
+    document.getElementById('chart-ts-area').getContext('2d'),
+    mkLine(vis_c.map(c => lineDs(c, filtY.map(y => area[c]?.[y]??null))), filtY));
+
+  const periods = [...new Set(growth.map(r=>`${r.from_year}–${r.to_year}`))];
+  const getGrowth = (c, p, key) => {
+    const [y1,y2] = p.split('–').map(Number);
+    return growth.find(r=>r.city===c&&r.from_year===y1&&r.to_year===y2)?.[key]??null;
+  };
+
+  destroyChart('chart-ts-growth');
+  charts['chart-ts-growth'] = new Chart(
+    document.getElementById('chart-ts-growth').getContext('2d'),
+    mkLine(vis_c.map(c=>lineDs(c, periods.map(p=>getGrowth(c,p,'total_growth_pct')))), periods));
+
+  destroyChart('chart-ts-cagr');
+  charts['chart-ts-cagr'] = new Chart(
+    document.getElementById('chart-ts-cagr').getContext('2d'),
+    mkLine(vis_c.map(c=>lineDs(c, periods.map(p=>getGrowth(c,p,'annual_rate_pct')), {fill:false})), periods));
+
+  const thead = document.querySelector('#ts-table thead tr');
+  thead.innerHTML = '<th>City</th>' +
+    (DATA.epochs||[]).map(y =>
+      `<th style="${!visY(y)?'opacity:.3':''}">${y}</th>`).join('');
+  document.querySelector('#ts-table tbody').innerHTML = vis_c.map(c =>
+    `<tr>
+      <td><span class="city-dot" style="background:${CITY_COLORS[c]}"></span>${CITY_LABELS[c]||c}</td>
+      ${(DATA.epochs||[]).map(y =>
+        `<td style="${!visY(y)?'opacity:.3':''}">${area[c]?.[y]?.toFixed(1)??'—'}</td>`
+      ).join('')}
+    </tr>`).join('');
+
+  renderRawClean();
+}
+
+function renderRawClean() {
+  if (!DATA) return;
+  const c = document.getElementById('rawclean-city').value;
+  if (!c) return;
+  destroyChart('chart-rawclean');
+  const clean = DATA.urban_area?.clean?.[c] || {};
+  const raw   = DATA.urban_area?.raw?.[c]   || {};
+  const years = DATA.epochs || [];
+  charts['chart-rawclean'] = new Chart(
+    document.getElementById('chart-rawclean').getContext('2d'), {
+      type:'line',
+      data:{ labels: years, datasets:[
+        { label:'Clean (corrected)', data:years.map(y=>clean[y]??null),
+          borderColor:CITY_COLORS[c], backgroundColor:CITY_COLORS[c]+'18',
+          fill:true, borderWidth:2, spanGaps:true, tension:0.3,
+          pointBackgroundColor:'#fff', pointBorderColor:CITY_COLORS[c], pointBorderWidth:2 },
+        { label:'Raw',               data:years.map(y=>raw[y]??null),
+          borderColor:'#aaaaaa', backgroundColor:'transparent',
+          borderWidth:1.5, borderDash:[5,4], fill:false, spanGaps:true, tension:0.3,
+          pointRadius:3 }
+      ]},
+      options:{ ...BASE }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── ACCURACY ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+function renderAccuracyCharts() {
+  if (!DATA) return;
+  const acc = DATA.accuracy || [];
+  if (!acc.length) {
+    document.getElementById('acc-nodata').style.display  = 'block';
+    document.getElementById('acc-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('acc-nodata').style.display  = 'none';
+  document.getElementById('acc-content').style.display = 'block';
+
+  const filtY = (DATA.epochs||[]).filter(visY);
+  const vis_c = (DATA.cities||[]).filter(vis);
+  const find  = (c, y, key) => acc.find(r=>r.city===c&&r.year===y)?.[key]??null;
+
+  destroyChart('chart-oa');
+  charts['chart-oa'] = new Chart(
+    document.getElementById('chart-oa').getContext('2d'),
+    mkLine(vis_c.map(c => lineDs(c, filtY.map(y => find(c,y,'OA')))), filtY));
+
+  destroyChart('chart-f1');
+  charts['chart-f1'] = new Chart(
+    document.getElementById('chart-f1').getContext('2d'),
+    mkBar(vis_c.map(c => barDs(c, filtY.map(y => find(c,y,'F1')))), filtY));
+
+  destroyChart('chart-kappa');
+  charts['chart-kappa'] = new Chart(
+    document.getElementById('chart-kappa').getContext('2d'), {
+      type:'bar',
+      data:{ labels: vis_c.map(c=>CITY_LABELS[c]||c),
+        datasets:[{ label:'Avg Kappa',
+          data: vis_c.map(c=>{
+            const vals = acc.filter(r=>r.city===c && r.K!=null).map(r=>r.K);
+            return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+          }),
+          backgroundColor: vis_c.map(c=>CITY_COLORS[c]+'88'),
+          borderColor:     vis_c.map(c=>CITY_COLORS[c]), borderWidth:1 }] },
+      options:{ ...BASE, scales:{ ...BASE.scales, y:{ ...BASE.scales.y, min:0, max:1 } } }
+    });
+
+  renderAccBars();
+}
+
+function renderAccBars() {
+  if (!DATA) return;
+  const acc = DATA.accuracy || [];
+  if (!acc.length) return;
+  const y = parseInt(document.getElementById('acc-year-select').value);
+  const metrics = [['OA','Ovr. Acc',100],['P','Precision',1],['R','Recall',1],['F1','F1-Score',1],['K','Kappa',1]];
+  let html = '';
+  (DATA.cities||[]).filter(vis).forEach(c => {
+    const row = acc.find(r => r.city===c && r.year===y);
+    if (!row) { html += `<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">${CITY_LABELS[c]||c}: no data for ${y}</div>`; return; }
+    html += `<div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:500;color:${CITY_COLORS[c]};margin-bottom:8px;display:flex;align-items:center;gap:7px;">
+        <span style="display:inline-block;width:8px;height:8px;background:${CITY_COLORS[c]};border-radius:50%;"></span>
+        ${CITY_LABELS[c]||c}
+      </div>`;
+    metrics.forEach(([k, label, mx]) => {
+      const val = row[k];
+      const pct = val != null ? (val / mx) * 100 : 0;
+      html += `<div class="metric-row">
+        <span class="metric-name">${label}</span>
+        <div class="metric-bar-wrap"><div class="metric-bar" style="width:${pct}%;background:${CITY_COLORS[c]}"></div></div>
+        <span class="metric-val">${k==='OA' ? val+'%' : (val!=null?val.toFixed(2):'—')}</span>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('acc-bars').innerHTML =
+    html || '<div style="color:var(--muted);font-size:12px">No accuracy data for selected filters</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── SDG ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+function renderSdgCharts() {
+  if (!DATA) return;
+  const lcr   = DATA.lcr || [];
+  const vis_c = (DATA.cities||[]).filter(vis);
+
+  const countVerdict = (word) =>
+    lcr.filter(r => activeCities.has(r.city) && (r.verdict||'').includes(word)).length;
+
+  document.getElementById('sdg-kpi-row').innerHTML = [
+    { label:'Sprawl Periods (LCR>1.1)',    val:countVerdict('Sprawl'),        sub:'Land consumed faster than population' },
+    { label:'Densification (LCR<0.9)',     val:countVerdict('Densification'), sub:'Population growing into footprint'    },
+    { label:'Balanced (0.9–1.1)',          val:countVerdict('Balanced'),      sub:'Proportional land & population growth' },
+  ].map(d => `<div class="kpi-card">
+    <div class="kpi-label">${d.label}</div>
+    <div class="kpi-value">${d.val}</div>
+    <div class="kpi-sub">${d.sub}</div>
+  </div>`).join('');
+
+  destroyChart('chart-lcr');
+  const periods = [...new Set(lcr.map(r=>`${r.from_year}–${r.to_year}`))];
+  const getL = (c, p) => {
+    const [y1,y2] = p.split('–').map(Number);
+    return lcr.find(r=>r.city===c&&r.from_year===y1&&r.to_year===y2)?.LCR??null;
+  };
+  charts['chart-lcr'] = new Chart(
+    document.getElementById('chart-lcr').getContext('2d'),
+    mkBar(vis_c.map(c => barDs(c, periods.map(p=>getL(c,p)))), periods));
+
+  document.querySelector('#sdg-table tbody').innerHTML =
+    lcr.filter(r => activeCities.has(r.city)).map(r => {
+      const v   = r.verdict || '';
+      const cls = v.includes('Densification') ? 'densification' : v.includes('Balanced') ? 'balanced' : 'sprawl';
+      return `<tr>
+        <td><span class="city-dot" style="background:${CITY_COLORS[r.city]}"></span>${CITY_LABELS[r.city]||r.city}</td>
+        <td>${r.from_year}–${r.to_year}</td>
+        <td>${r.LCR!=null?r.LCR.toFixed(4):'—'}</td>
+        <td>${r.CAGR_land_pct!=null?r.CAGR_land_pct.toFixed(4):'—'}</td>
+        <td>${r.CAGR_pop_pct!=null?r.CAGR_pop_pct.toFixed(4):'—'}</td>
+        <td><span class="pill ${cls}">${v}</span></td>
+      </tr>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── MORPHOLOGY ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+function renderMorphologyCharts() {
+  if (!DATA) return;
+  const compact = DATA.compactness || [];
+  if (!compact.length) {
+    document.getElementById('morph-nodata').style.display = 'block';
+    return;
+  }
+  document.getElementById('morph-nodata').style.display = 'none';
+
+  const filtY = (DATA.epochs||[]).filter(visY);
+  const vis_c = (DATA.cities||[]).filter(vis);
+
+  function morphLine(canvasId, metric) {
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(
+      document.getElementById(canvasId).getContext('2d'),
+      mkLine(
+        vis_c.map(c => lineDs(c,
+          filtY.map(y => compact.find(r=>r.city===c&&r.year===y&&!r.is_anomaly)?.[metric]??null),
+          { fill:false }
+        )),
+        filtY
+      ));
+  }
+  morphLine('chart-lsi', 'LSI');
+  morphLine('chart-lpi', 'LPI');
+  morphLine('chart-pd',  'PD');
+
+  document.querySelector('#morph-table tbody').innerHTML =
+    compact.filter(r => activeCities.has(r.city)).map(r => `<tr>
+      <td><span class="city-dot" style="background:${CITY_COLORS[r.city]}"></span>${CITY_LABELS[r.city]||r.city}</td>
+      <td>${r.year}</td>
+      <td>${r.LSI!=null?r.LSI.toFixed(4):'—'}</td>
+      <td>${r.LPI!=null?r.LPI.toFixed(4):'—'}</td>
+      <td>${r.PD!=null?r.PD.toFixed(4):'—'}</td>
+      <td>${r.is_anomaly?'<span style="color:#d97706">⚠ yes</span>':'—'}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── MAP ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+let leafletMap = null;
+
+function initMap() {
+  leafletMap = L.map('map').setView([20, 20], 2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution:'© OpenStreetMap contributors' }).addTo(leafletMap);
+
+  const area  = DATA?.urban_area?.clean || {};
+  const trend = DATA?.trend || {};
+  (DATA?.cities || []).forEach(c => {
+    const coords = CITY_COORDS[c];
+    if (!coords) return;
+    const [lat, lng] = coords;
+    const epochs = Object.keys(area[c]||{}).map(Number).sort((a,b)=>a-b);
+    const start  = area[c]?.[epochs[0]];
+    const end    = area[c]?.[epochs[epochs.length-1]];
+    L.circle([lat, lng], {
+      color: CITY_COLORS[c], fillColor: CITY_COLORS[c],
+      fillOpacity: 0.18, radius: 38000, weight: 2
+    }).addTo(leafletMap).bindPopup(`
+      <div style="font-family:DM Sans,sans-serif;font-size:13px;min-width:170px;">
+        <strong style="font-size:14px;">${CITY_LABELS[c]||c}</strong><br>
+        <span style="color:#8a8278;font-size:11px;font-family:'JetBrains Mono',monospace;">
+          Urban area ${epochs[0]||'—'}: <strong>${start?.toFixed(1)??'—'} km²</strong><br>
+          Urban area ${epochs[epochs.length-1]||'—'}: <strong>${end?.toFixed(1)??'—'} km²</strong><br>
+          Trend slope: <strong>${trend[c]?.slope?.toFixed(2)??'—'} km²/yr</strong><br>
+          R²: <strong>${trend[c]?.r_squared?.toFixed(3)??'—'}</strong>
+        </span>
+      </div>`);
+  });
+}
+
+function mapZoom(city) {
+  if (!leafletMap) { initMap(); mapInitialized = true; }
+  if (city === 'all') { leafletMap.setView([20, 20], 2); return; }
+  const coords = CITY_COORDS[city];
+  if (coords) leafletMap.setView([coords[0], coords[1]], coords[2]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// REFRESH ALL
+// ═══════════════════════════════════════════════════════════════════════
+function refreshAll() {
+  if (!DATA) return;
+  renderKPIs();
+  renderAreaChart();
+  renderSummaryTable();
+  renderCagrChart();
+  renderR2Chart();
+  renderSlopeOvChart();
+  renderTsCharts();
+  renderAccuracyCharts();
+  renderSdgCharts();
+  renderMorphologyCharts();
+  if (mapInitialized && leafletMap) {
+    leafletMap.eachLayer(l => { if (l instanceof L.Circle) leafletMap.removeLayer(l); });
+    const area  = DATA?.urban_area?.clean || {};
+    const trend = DATA?.trend || {};
+    (DATA?.cities||[]).forEach(c => {
+      const coords = CITY_COORDS[c];
+      if (!coords) return;
+      const [lat, lng] = coords;
+      const epochs = Object.keys(area[c]||{}).map(Number).sort((a,b)=>a-b);
+      const start  = area[c]?.[epochs[0]];
+      const end    = area[c]?.[epochs[epochs.length-1]];
+      L.circle([lat, lng], { color:CITY_COLORS[c], fillColor:CITY_COLORS[c], fillOpacity:.18, radius:38000, weight:2 })
+       .addTo(leafletMap)
+       .bindPopup(`<div style="font-family:DM Sans,sans-serif;font-size:13px;min-width:160px;">
+         <strong>${CITY_LABELS[c]||c}</strong><br>
+         <span style="color:#8a8278;font-size:11px;font-family:'JetBrains Mono',monospace;">
+           Urban area ${epochs[0]}: <strong>${start?.toFixed(1)??'—'} km²</strong><br>
+           Urban area ${epochs[epochs.length-1]}: <strong>${end?.toFixed(1)??'—'} km²</strong><br>
+           Slope: <strong>${trend[c]?.slope?.toFixed(2)??'—'} km²/yr</strong><br>
+           R²: <strong>${trend[c]?.r_squared?.toFixed(3)??'—'}</strong>
+         </span>
+       </div>`);
+    });
+  }
+}
+</script>
+</body>
+</html>
