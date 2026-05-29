@@ -64,7 +64,7 @@ urban-sprawl-analysis/
 All input and output folders are **linked through a single Google Drive root folder** (`urban_sprawl_analysis/`). The notebook reads training CSVs from `data/`, writes classification results to `results/`, and exports GeoTIFFs to `classification/` and `bands_ndvi_bui/` — all inside the same Drive folder. Phase 7 reads those exported GeoTIFFs directly from Drive with no manual file movement needed.
 
 ```
-Google Drive: My Drive/urban_sprawl_analysis/
+Google Drive: https://drive.google.com/drive/folders/1AVXKrdCv3Zex3C92yBlYPYLLNYiO_M9Y
 ├── data/           ← you upload these once (training CSVs)
 ├── results/        ← auto-filled by Phase 4
 ├── classification/ ← auto-filled by Phase 6 (GEE export)
