@@ -120,7 +120,7 @@ The pipeline is divided into **7 sequential phases**, each building on the previ
 
 ##  How to Run — Google Colab (Recommended)
 
-There are **two ways** to open the notebook in Google Colab. Choose whichever suits you.
+There are **Two ways** to open the notebook in Google Colab. Choose whichever suits you.
 
 ---
 
@@ -131,10 +131,11 @@ There are **two ways** to open the notebook in Google Colab. Choose whichever su
 3. Select the **GitHub** tab
 4. Paste your repository URL:
    ```
-   https://github.com/<your-username>/urban-sprawl-analysis
+   https://github.com/Aminagadiri-ui/Urban_Sprawl_classification_and_analysis
    ```
 5. Select `Urban_Sprawl_Analysis_and_classification_and_Visualisation.ipynb` from the list
 6. The notebook opens directly in Colab — no files to download
+7. All data sources are linked via Google Drive [https://drive.google.com/drive/folders/1AVXKrdCv3Zex3C92yBlYPYLLNYiO_M9Y](https://drive.google.com/drive/folders/1AVXKrdCv3Zex3C92yBlYPYLLNYiO_M9Y) ; therefore, uploading local folders and CSV files is not required.
 
 
 
@@ -145,7 +146,7 @@ There are **two ways** to open the notebook in Google Colab. Choose whichever su
 **Step 1 — Clone the repo** (in your terminal or Git Bash):
 
 ```bash
-git clone https://github.com/<your-username>/urban-sprawl-analysis.git
+git clone https://github.com/Aminagadiri-ui/Urban_Sprawl_classification_and_analysis
 ```
 
 **Step 2 — Open Colab** at [https://colab.research.google.com](https://colab.research.google.com)
@@ -156,10 +157,10 @@ git clone https://github.com/<your-username>/urban-sprawl-analysis.git
   ```
   Urban_Sprawl_Analysis_and_classification_and_Visualisation.ipynb
   ```
-
+- All data sources are linked via Google Drive [https://drive.google.com/drive/folders/1AVXKrdCv3Zex3C92yBlYPYLLNYiO_M9Y](https://drive.google.com/drive/folders/1AVXKrdCv3Zex3C92yBlYPYLLNYiO_M9Y) ; therefore, uploading local folders and CSV files is not required.
 ---
 
-### ✅ After Opening — Complete Setup (Both Options)
+### After Opening — Complete Setup (Both Options)
 
 Once the notebook is open in Colab, follow these steps **in order**:
 
@@ -169,30 +170,6 @@ Once the notebook is open in Colab, follow these steps **in order**:
 
 Go to **Runtime → Change runtime type → Hardware accelerator → GPU** (or High-RAM CPU).
 
----
-
-#### Step 2 — Set Up Google Drive (Do This Once)
-
-The notebook reads all data from and writes all results to a **single folder in your Google Drive**. You need to create this structure once and upload the two training CSVs.
-
-**2.1** — Go to [https://drive.google.com](https://drive.google.com) and create this exact folder structure:
-
-```
-My Drive/
-└── urban_sprawl_analysis/
-    ├── data/               ← upload the two CSVs here
-    ├── classification/     ← leave empty (Phase 6 fills this)
-    ├── bands_ndvi_bui/     ← leave empty (Phase 6 fills this)
-    └── results/            ← leave empty (Phase 4 fills this)
-```
-
-**2.2** — Upload these two files into `My Drive/urban_sprawl_analysis/data/`:
-- `data/Binary_Cairo_Training.csv`
-- `data/Categorical_Cairo_Training.csv`
-
-> These files are in the cloned repository's `data/` folder. If you used Option A (GitHub direct open), download them from GitHub and upload manually to Drive.
-
-> ⚠️ The path must be exactly `urban_sprawl_analysis/data/` — any difference will cause a `FileNotFoundError` in Phase 4.
 
 ---
 
@@ -200,9 +177,8 @@ My Drive/
 
 1. Go to [https://console.cloud.google.com/apis/library](https://console.cloud.google.com/apis/library)
 2. Search for **"Earth Engine API"** → click **Enable**
-3. Note your **Project ID** (shown at the top of the Cloud Console, e.g. `my-project-123456`)
 
-> New GEE accounts may need approval — sign up at [https://earthengine.google.com/signup](https://earthengine.google.com/signup). Approval takes 24–48 hours.
+
 
 ---
 
@@ -225,13 +201,13 @@ Runs automatically. Installs `earthengine-api` and `geemap`. If you see `ModuleN
 
 **Phases 3–5 — Feature Engineering, Classification, Accuracy**
 
-Run all cells in order. When prompted to mount Google Drive, click **Connect to Google Drive** and grant access. Results CSVs are saved automatically to `My Drive/urban_sprawl_analysis/results/`.
+Run all cells in order. When prompted to mount Google Drive, click **Connect to Google Drive**  and grant access. Results CSVs are saved automatically to `MyDrive/urban_sprawl_analysis/results/`.
 
 **Phase 6 — Export GeoTIFFs to Google Drive**
 
 - Run all export cells. Each cell submits GEE background tasks.
 - Monitor progress at [https://code.earthengine.google.com](https://code.earthengine.google.com) → **Tasks** tab.
-- Wait until all tasks show ✅ **COMPLETED** before running Phase 7.
+- Wait until all tasks show  **COMPLETED** before running Phase 7.
 - Export time: ~15–45 min per file; all 24 rasters may take 3–8 hours total.
 - You can close Colab while exports run — they execute on GEE servers independently.
 
@@ -259,56 +235,6 @@ Reads the exported GeoTIFFs from Drive. No GEE session needed. Run all cells in 
 
 ---
 
-## 🔁 Execution Order Quick Reference
-
-```
-§ 1.1 → § 1.2        Install libraries & import
-§ 2.1                 Authenticate GEE (every session)
-§ 2.2                 Cloud mask & composite functions
-§ 3.1 → § 3.2        Spectral indices + visualisation
-§ 4.1 → § 4.2        RF classification (categorical + binary)
-§ 5.1 → § 5.2        Accuracy evaluation vs. GHSL
-§ 6.1 → § 6.2        Export GeoTIFFs → Google Drive
-                      ⏳ Wait for all GEE tasks to complete
-§ 7.1 → § 7.11       Time-series metrics (local raster processing)
-Dashboard cell        Launch Flask + Cloudflare tunnel
-```
-
----
-
-## 🛠️ Common Issues & Fixes
-
-| Error | Likely Cause | Fix |
-|---|---|---|
-| `EEException: Earth Engine client is not initialized` | Wrong project ID or GEE not authenticated | Re-run § 2.1 with the correct project ID |
-| `FileNotFoundError: .../Binary_Cairo_Training.csv` | CSV not uploaded to Drive or folder name wrong | Verify Drive structure matches Step 2 exactly |
-| `ModuleNotFoundError: No module named 'geemap'` | Install cell not run or kernel restarted | Re-run § 1.1 → Restart runtime → Re-run § 1.2 |
-| Phase 7 skips all cities | GeoTIFF exports not finished | Wait for all GEE Tasks to show COMPLETED |
-| Dashboard shows "Connection failed" | Colab closed or Flask cell not running | Re-run the dashboard backend cell |
-| 2015 Atlanta cloud anomaly still visible | Seasonal window not applied before export | Re-export 2015 rasters with updated `get_image()` |
-
----
-
-## 📦 Python Dependencies
-
-Key packages (full list in `requirements.txt`):
-
-```
-earthengine-api>=0.1.370
-geemap>=0.29.0
-numpy>=1.24.0
-pandas>=2.0.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-rasterio>=1.3.0
-scipy>=1.10.0
-scikit-learn>=1.3.0
-plotly>=5.15.0
-pylandstats>=2.4.0
-flask>=3.0.0
-flask-cors>=4.0.0
-geopandas>=0.14.0
-```
 
 Install locally (if not using Colab):
 ```bash
@@ -317,6 +243,6 @@ pip install -r requirements.txt
 
 ---
 
-## 📄 License
+##  License
 
 See [LICENSE](LICENSE) for terms of use.
