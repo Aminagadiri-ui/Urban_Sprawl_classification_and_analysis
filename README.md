@@ -119,8 +119,8 @@ The pipeline is divided into **7 sequential phases**, each building on the previ
 ---
 
 ##  How to Run — Google Colab (Recommended)
-
-There are **Two ways** to open the notebook in Google Colab. Choose whichever suits you.
+nteractive map rendering — Colab renders geemap and folium interactive maps inline inside the notebook output cells. In a local Jupyter setup, map tiles frequently fail to load or require additional server configuration to display correctly.
+There are **Two ways** to open the notebook in Google Colab. 
 
 ---
 
